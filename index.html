@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Color Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -54,6 +55,31 @@
       cursor: pointer;
     }
 
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .top-bar input[type="search"] {
+      flex: 1;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .top-bar button {
+      background-color: #f9b17a;
+      border: none;
+      color: #0f0f11;
+      font-weight: bold;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -70,14 +96,6 @@
     .swatch {
       height: 100px;
       position: relative;
-    }
-
-    .swatch::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.2);
-      display: none;
     }
 
     .info {
@@ -107,26 +125,11 @@
       color: #f9b17a;
       cursor: pointer;
     }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .top-bar input[type="search"] {
-      flex: 1;
-      padding: 0.5rem;
-      border-radius: 6px;
-      border: none;
-    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🎨 Color Gallery</h1>
+    <h1> Color Gallery</h1>
     <div class="form">
       <input type="text" id="name" placeholder="Nama Warna" />
       <input type="text" id="hex" placeholder="#KodeHex" />
@@ -138,6 +141,7 @@
       <input type="search" id="search" placeholder="Cari warna..." oninput="renderColors()" />
       <button onclick="exportColors()">Export</button>
       <input type="file" id="importFile" accept=".json" onchange="importColors(event)" />
+      <button onclick="saveEachCardAsImage()">Save per Warna</button>
     </div>
 
     <div class="gallery" id="gallery"></div>
@@ -213,6 +217,19 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    function saveEachCardAsImage() {
+      const cards = document.querySelectorAll(".card");
+      cards.forEach((card, index) => {
+        const name = card.querySelector(".info h2").innerText;
+        html2canvas(card).then(canvas => {
+          const link = document.createElement("a");
+          link.download = `${name.replace(/\s+/g, '_') || 'color'}_${index + 1}.jpg`;
+          link.href = canvas.toDataURL("image/jpeg");
+          link.click();
+        });
+      });
     }
 
     function renderColors() {
