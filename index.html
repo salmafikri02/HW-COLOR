@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Color Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -15,12 +14,12 @@
     body {
       margin: 0;
       padding: 0;
-      background-color: #0f0f11;
+      background-color: #101010;
       color: #fff;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 2rem;
     }
@@ -28,7 +27,7 @@
     h1 {
       text-align: center;
       margin-bottom: 2rem;
-      color: #b1ff00;
+      color: #A3FF12;
     }
 
     .form {
@@ -47,9 +46,9 @@
 
     .form button {
       padding: 0.6rem 1rem;
-      background-color: #f9b17a;
+      background-color: #A3FF12;
       border: none;
-      color: #0f0f11;
+      color: #101010;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
@@ -71,9 +70,9 @@
     }
 
     .top-bar button {
-      background-color: #f9b17a;
+      background-color: #A3FF12;
       border: none;
-      color: #0f0f11;
+      color: #101010;
       font-weight: bold;
       padding: 0.6rem 1rem;
       border-radius: 6px;
@@ -82,12 +81,12 @@
 
     .gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(5, 1fr);
       gap: 1rem;
     }
 
     .card {
-      background-color: #1e1e23;
+      background-color: #1a1a1a;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -95,7 +94,6 @@
 
     .swatch {
       height: 100px;
-      position: relative;
     }
 
     .info {
@@ -122,14 +120,14 @@
     .actions button {
       border: none;
       background: none;
-      color: #f9b17a;
+      color: #A3FF12;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1> Color Gallery</h1>
+    <h1>Color Gallery</h1>
     <div class="form">
       <input type="text" id="name" placeholder="Nama Warna" />
       <input type="text" id="hex" placeholder="#KodeHex" />
@@ -141,7 +139,6 @@
       <input type="search" id="search" placeholder="Cari warna..." oninput="renderColors()" />
       <button onclick="exportColors()">Export</button>
       <input type="file" id="importFile" accept=".json" onchange="importColors(event)" />
-      <button onclick="saveEachCardAsImage()">Save per Warna</button>
     </div>
 
     <div class="gallery" id="gallery"></div>
@@ -219,40 +216,30 @@
       reader.readAsText(file);
     }
 
-    function saveEachCardAsImage() {
-      const cards = document.querySelectorAll(".card");
-      cards.forEach((card, index) => {
-        const name = card.querySelector(".info h2").innerText;
-        html2canvas(card).then(canvas => {
-          const link = document.createElement("a");
-          link.download = `${name.replace(/\s+/g, '_') || 'color'}_${index + 1}.jpg`;
-          link.href = canvas.toDataURL("image/jpeg");
-          link.click();
-        });
-      });
-    }
-
     function renderColors() {
       const q = document.getElementById("search").value.toLowerCase();
       const gallery = document.getElementById("gallery");
       gallery.innerHTML = "";
-      colors.filter(c => c.name.toLowerCase().includes(q)).forEach((color, index) => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="swatch" style="background-color: ${color.hex};"></div>
-          <div class="info">
-            <h2>${color.name}</h2>
-            <p>${color.hex}</p>
-            <p>${color.pantone}</p>
-          </div>
-          <div class="actions">
-            <button onclick="editColor(${index})">Edit</button>
-            <button onclick="deleteColor(${index})">Hapus</button>
-          </div>
-        `;
-        gallery.appendChild(card);
-      });
+      [...colors]
+        .filter(c => c.name.toLowerCase().includes(q))
+        .sort((a, b) => a.hex.localeCompare(b.hex))
+        .forEach((color, index) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="swatch" style="background-color: ${color.hex};"></div>
+            <div class="info">
+              <h2>${color.name}</h2>
+              <p>${color.hex}</p>
+              <p>${color.pantone}</p>
+            </div>
+            <div class="actions">
+              <button onclick="editColor(${index})">Edit</button>
+              <button onclick="deleteColor(${index})">Hapus</button>
+            </div>
+          `;
+          gallery.appendChild(card);
+        });
     }
 
     renderColors();
