@@ -2,126 +2,218 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Color Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAifaVTsLGOVoS5cYLvrTF7HOFXJUCq9vc",
+      authDomain: "color-galery.firebaseapp.com",
+      projectId: "color-galery",
+      storageBucket: "color-galery.firebasestorage.app",
+      messagingSenderId: "133690425590",
+      appId: "1:133690425590:web:eb314c84b37bdf1a91ecd7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const colorsCol = collection(db, "colors");
+
+    async function renderColors() {
+      const gallery = document.getElementById("gallery");
+      const q = document.getElementById("search").value.toLowerCase();
+      const snapshot = await getDocs(colorsCol);
+      const docs = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(c =>
+          c.name.toLowerCase().includes(q) ||
+          c.hex.toLowerCase().includes(q) ||
+          (c.pantone && c.pantone.toLowerCase().includes(q))
+        )
+        .sort((a, b) => a.hex.localeCompare(b.hex));
+
+      gallery.innerHTML = "";
+      docs.forEach((color, index) => {
+        const card = document.createElement("div");
+        card.className = "card glass";
+        card.innerHTML = `
+          <div class="swatch" style="background-color: ${color.hex};"></div>
+          <div class="info">
+            <h2>${color.name}</h2>
+            <p>${color.hex}</p>
+            <p>${color.pantone || ''}</p>
+          </div>
+          <div class="actions">
+            <button onclick="editColor('${color.id}')">Edit</button>
+            <button onclick="deleteColor('${color.id}')">Delete</button>
+          </div>
+        `;
+        gallery.appendChild(card);
+      });
+    }
+
+    window.addColor = async function () {
+      const name = document.getElementById("name").value.trim();
+      const hex = document.getElementById("hex").value.trim().toLowerCase();
+      const pantone = document.getElementById("pantone").value.trim();
+      if (!name || !/^#?[0-9a-fA-F]{6}$/.test(hex)) return alert("Data tidak valid!");
+      const formattedHex = hex.startsWith("#") ? hex : `#${hex}`;
+      const snapshot = await getDocs(colorsCol);
+      const exists = snapshot.docs.find(doc => doc.data().hex === formattedHex);
+      if (exists) return alert("Warna sudah ada!");
+      await addDoc(colorsCol, { name, hex: formattedHex, pantone });
+      document.getElementById("name").value = "";
+      document.getElementById("hex").value = "";
+      document.getElementById("pantone").value = "";
+      renderColors();
+    };
+
+    window.deleteColor = async function (id) {
+      if (confirm("Delete this color?")) {
+        await deleteDoc(doc(db, "colors", id));
+        renderColors();
+      }
+    };
+
+    window.editColor = async function (id) {
+      const ref = doc(db, "colors", id);
+      const snapshot = await getDocs(colorsCol);
+      const current = snapshot.docs.find(d => d.id === id).data();
+      const name = prompt("Nama warna:", current.name);
+      const hex = prompt("Kode Hex:", current.hex);
+      const pantone = prompt("Pantone:", current.pantone);
+      if (name && hex) {
+        const formattedHex = hex.startsWith("#") ? hex : `#${hex}`;
+        await updateDoc(ref, { name, hex: formattedHex, pantone });
+        renderColors();
+      }
+    };
+
+    window.exportColors = async function () {
+      const snapshot = await getDocs(colorsCol);
+      const data = snapshot.docs.map(doc => doc.data());
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "color-gallery.json";
+      a.click();
+    };
+
+    window.importColors = async function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          for (const color of imported) {
+            await addDoc(colorsCol, color);
+          }
+          renderColors();
+        } catch {
+          alert("File tidak valid!");
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    document.getElementById("search").addEventListener("input", renderColors);
+    window.addEventListener("load", renderColors);
+  </script>
   <style>
     * {
       box-sizing: border-box;
       font-family: 'Montserrat', sans-serif;
     }
-
     body {
       margin: 0;
       padding: 0;
-      background-color: #101010;
+      background-color: #0a0a0a;
       color: #fff;
     }
-
     .container {
-      max-width: 1200px;
+      max-width: 960px;
       margin: 0 auto;
       padding: 2rem;
     }
-
     h1 {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       color: #A3FF12;
     }
-
-    .form {
+    .form, .top-bar {
       display: flex;
-      gap: 1rem;
       flex-wrap: wrap;
-      margin-bottom: 2rem;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
     }
-
-    .form input {
-      padding: 0.5rem;
-      border-radius: 6px;
-      border: none;
+    input, .top-bar input[type="file"] {
+      padding: 0.6rem;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      border: 1px solid #333;
       flex: 1;
     }
-
-    .form button {
-      padding: 0.6rem 1rem;
-      background-color: #A3FF12;
-      border: none;
-      color: #101010;
+    button {
+      padding: 0.6rem 1.2rem;
+      background: linear-gradient(to right, #00ff88, #8eff00);
+      color: #000;
       font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .top-bar input[type="search"] {
-      flex: 1;
-      padding: 0.5rem;
-      border-radius: 6px;
       border: none;
-    }
-
-    .top-bar button {
-      background-color: #A3FF12;
-      border: none;
-      color: #101010;
-      font-weight: bold;
-      padding: 0.6rem 1rem;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
+      transition: transform 0.2s ease;
     }
-
+    button:hover {
+      transform: scale(1.05);
+    }
     .gallery {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.2rem;
     }
-
     .card {
-      background-color: #1a1a1a;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid #2e2e2e;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    }
-
-    .swatch {
-      height: 100px;
-    }
-
-    .info {
+      backdrop-filter: blur(10px);
       padding: 1rem;
+      transition: box-shadow 0.2s ease;
     }
-
+    .card:hover {
+      box-shadow: 0 0 10px rgba(163, 255, 18, 0.3);
+    }
+    .swatch {
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
     .info h2 {
-      font-size: 1rem;
       margin: 0;
-      color: #ffffff;
+      font-size: 1rem;
     }
-
     .info p {
-      margin: 0.3rem 0;
+      margin: 0.25rem 0;
+      font-size: 0.9rem;
       color: #ccc;
     }
-
     .actions {
+      margin-top: 0.5rem;
       display: flex;
       justify-content: space-between;
-      padding: 0 1rem 1rem;
     }
-
     .actions button {
-      border: none;
-      background: none;
+      background: #111;
+      border: 1px solid #2e2e2e;
       color: #A3FF12;
-      cursor: pointer;
+      font-weight: 500;
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
     }
   </style>
 </head>
@@ -132,117 +224,14 @@
       <input type="text" id="name" placeholder="Nama Warna" />
       <input type="text" id="hex" placeholder="#KodeHex" />
       <input type="text" id="pantone" placeholder="Pantone (opsional)" />
-      <button onclick="addColor()">Tambah</button>
+      <button onclick="addColor()">Add</button>
     </div>
-
     <div class="top-bar">
-      <input type="search" id="search" placeholder="Cari warna..." oninput="renderColors()" />
+      <input type="search" id="search" placeholder="Search colors (name, hex, pantone)..." />
       <button onclick="exportColors()">Export</button>
       <input type="file" id="importFile" accept=".json" onchange="importColors(event)" />
     </div>
-
     <div class="gallery" id="gallery"></div>
   </div>
-
-  <script>
-    let colors = JSON.parse(localStorage.getItem("colors")) || [];
-
-    function saveColors() {
-      localStorage.setItem("colors", JSON.stringify(colors));
-    }
-
-    function addColor() {
-      const name = document.getElementById("name").value.trim();
-      const hex = document.getElementById("hex").value.trim().toLowerCase();
-      const pantone = document.getElementById("pantone").value.trim();
-
-      if (!name || !/^#?[0-9a-fA-F]{6}$/.test(hex)) return alert("Data tidak valid!");
-
-      const formattedHex = hex.startsWith("#") ? hex : `#${hex}`;
-      if (colors.find(c => c.hex === formattedHex)) return alert("Warna sudah ada!");
-
-      colors.push({ name, hex: formattedHex, pantone });
-      saveColors();
-      renderColors();
-      document.getElementById("name").value = "";
-      document.getElementById("hex").value = "";
-      document.getElementById("pantone").value = "";
-    }
-
-    function deleteColor(index) {
-      if (confirm("Hapus warna ini?")) {
-        colors.splice(index, 1);
-        saveColors();
-        renderColors();
-      }
-    }
-
-    function editColor(index) {
-      const current = colors[index];
-      const name = prompt("Nama warna:", current.name);
-      const hex = prompt("Kode Hex:", current.hex);
-      const pantone = prompt("Pantone:", current.pantone);
-      if (name && hex) {
-        const formattedHex = hex.startsWith("#") ? hex : `#${hex}`;
-        if (colors.find((c, i) => c.hex === formattedHex && i !== index)) return alert("Warna duplikat!");
-        colors[index] = { name, hex: formattedHex, pantone };
-        saveColors();
-        renderColors();
-      }
-    }
-
-    function exportColors() {
-      const blob = new Blob([JSON.stringify(colors, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "color-gallery.json";
-      a.click();
-    }
-
-    function importColors(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const imported = JSON.parse(reader.result);
-          colors = imported;
-          saveColors();
-          renderColors();
-        } catch {
-          alert("File tidak valid!");
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function renderColors() {
-      const q = document.getElementById("search").value.toLowerCase();
-      const gallery = document.getElementById("gallery");
-      gallery.innerHTML = "";
-      [...colors]
-        .filter(c => c.name.toLowerCase().includes(q))
-        .sort((a, b) => a.hex.localeCompare(b.hex))
-        .forEach((color, index) => {
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="swatch" style="background-color: ${color.hex};"></div>
-            <div class="info">
-              <h2>${color.name}</h2>
-              <p>${color.hex}</p>
-              <p>${color.pantone}</p>
-            </div>
-            <div class="actions">
-              <button onclick="editColor(${index})">Edit</button>
-              <button onclick="deleteColor(${index})">Hapus</button>
-            </div>
-          `;
-          gallery.appendChild(card);
-        });
-    }
-
-    renderColors();
-  </script>
 </body>
 </html>
