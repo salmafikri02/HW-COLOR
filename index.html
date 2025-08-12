@@ -5,6 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Color Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+    body { margin: 0; padding: 0; background-color: #0a0a0a; color: #fff; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    h1 { text-align: center; margin-bottom: 1.5rem; color: #A3FF12; }
+    .form, .top-bar { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+    input, .top-bar input[type="file"] {
+      padding: 0.6rem; border-radius: 8px; background: #1a1a1a; color: #fff;
+      border: 1px solid #333; flex: 1;
+    }
+    button {
+      padding: 0.6rem 1.2rem; background: linear-gradient(to right, #00ff88, #8eff00);
+      color: #000; font-weight: bold; border: none; border-radius: 8px;
+      cursor: pointer; transition: transform 0.2s ease;
+    }
+    button:hover { transform: scale(1.05); }
+    .gallery {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.2rem;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.04); border: 1px solid #2e2e2e;
+      border-radius: 12px; overflow: hidden; backdrop-filter: blur(10px);
+      padding: 1rem; transition: box-shadow 0.2s ease;
+    }
+    .card:hover { box-shadow: 0 0 10px rgba(163, 255, 18, 0.3); }
+    .swatch { height: 80px; border-radius: 8px; margin-bottom: 1rem; }
+    .info h2 { margin: 0; font-size: 1rem; }
+    .info p { margin: 0.25rem 0; font-size: 0.9rem; color: #ccc; }
+    .actions { margin-top: 0.5rem; display: flex; justify-content: space-between; }
+    .actions button {
+      background: #111; border: 1px solid #2e2e2e; color: #A3FF12;
+      font-weight: 500; border-radius: 6px; padding: 0.4rem 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Color Gallery</h1>
+
+    <div class="form">
+      <input type="text" id="name" placeholder="Nama Warna" />
+      <input type="text" id="hex" placeholder="#KodeHex" />
+      <input type="text" id="pantone" placeholder="Pantone (opsional)" />
+      <button onclick="addColor()">Add</button>
+    </div>
+
+    <div class="top-bar">
+      <input type="search" id="search" placeholder="Search colors (name, hex, pantone)..." />
+      <button onclick="exportColors()">Export</button>
+      <input type="file" id="importFile" accept=".json" onchange="importColors(event)" />
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
@@ -36,9 +91,9 @@
         .sort((a, b) => a.hex.localeCompare(b.hex));
 
       gallery.innerHTML = "";
-      docs.forEach((color, index) => {
+      docs.forEach(color => {
         const card = document.createElement("div");
-        card.className = "card glass";
+        card.className = "card";
         card.innerHTML = `
           <div class="swatch" style="background-color: ${color.hex};"></div>
           <div class="info">
@@ -62,8 +117,7 @@
       if (!name || !/^#?[0-9a-fA-F]{6}$/.test(hex)) return alert("Data tidak valid!");
       const formattedHex = hex.startsWith("#") ? hex : `#${hex}`;
       const snapshot = await getDocs(colorsCol);
-      const exists = snapshot.docs.find(doc => doc.data().hex === formattedHex);
-      if (exists) return alert("Warna sudah ada!");
+      if (snapshot.docs.some(doc => doc.data().hex === formattedHex)) return alert("Warna sudah ada!");
       await addDoc(colorsCol, { name, hex: formattedHex, pantone });
       document.getElementById("name").value = "";
       document.getElementById("hex").value = "";
@@ -109,9 +163,18 @@
       reader.onload = async () => {
         try {
           const imported = JSON.parse(reader.result);
+          let added = 0, skipped = 0;
+          const snapshot = await getDocs(colorsCol);
+          const existingHex = snapshot.docs.map(d => d.data().hex);
           for (const color of imported) {
-            await addDoc(colorsCol, color);
+            if (existingHex.includes(color.hex)) {
+              skipped++;
+            } else {
+              await addDoc(colorsCol, color);
+              added++;
+            }
           }
+          alert(`Import selesai!\nBerhasil: ${added} warna\nDuplikat dilewati: ${skipped}`);
           renderColors();
         } catch {
           alert("File tidak valid!");
@@ -123,115 +186,5 @@
     document.getElementById("search").addEventListener("input", renderColors);
     window.addEventListener("load", renderColors);
   </script>
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Montserrat', sans-serif;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #0a0a0a;
-      color: #fff;
-    }
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      color: #A3FF12;
-    }
-    .form, .top-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    input, .top-bar input[type="file"] {
-      padding: 0.6rem;
-      border-radius: 8px;
-      background: #1a1a1a;
-      color: #fff;
-      border: 1px solid #333;
-      flex: 1;
-    }
-    button {
-      padding: 0.6rem 1.2rem;
-      background: linear-gradient(to right, #00ff88, #8eff00);
-      color: #000;
-      font-weight: bold;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    button:hover {
-      transform: scale(1.05);
-    }
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1.2rem;
-    }
-    .card {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid #2e2e2e;
-      border-radius: 12px;
-      overflow: hidden;
-      backdrop-filter: blur(10px);
-      padding: 1rem;
-      transition: box-shadow 0.2s ease;
-    }
-    .card:hover {
-      box-shadow: 0 0 10px rgba(163, 255, 18, 0.3);
-    }
-    .swatch {
-      height: 80px;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-    }
-    .info h2 {
-      margin: 0;
-      font-size: 1rem;
-    }
-    .info p {
-      margin: 0.25rem 0;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    .actions {
-      margin-top: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-    }
-    .actions button {
-      background: #111;
-      border: 1px solid #2e2e2e;
-      color: #A3FF12;
-      font-weight: 500;
-      border-radius: 6px;
-      padding: 0.4rem 0.8rem;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Color Gallery</h1>
-    <div class="form">
-      <input type="text" id="name" placeholder="Nama Warna" />
-      <input type="text" id="hex" placeholder="#KodeHex" />
-      <input type="text" id="pantone" placeholder="Pantone (opsional)" />
-      <button onclick="addColor()">Add</button>
-    </div>
-    <div class="top-bar">
-      <input type="search" id="search" placeholder="Search colors (name, hex, pantone)..." />
-      <button onclick="exportColors()">Export</button>
-      <input type="file" id="importFile" accept=".json" onchange="importColors(event)" />
-    </div>
-    <div class="gallery" id="gallery"></div>
-  </div>
 </body>
 </html>
