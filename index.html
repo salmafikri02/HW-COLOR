@@ -185,6 +185,99 @@
 
     document.getElementById("search").addEventListener("input", renderColors);
     window.addEventListener("load", renderColors);
-  </script>
+  
+    async function seedColorsFromJSON() {
+      const defaultColors = [
+  {
+    "name": "Lily Green",
+    "hex": "#c5cf98",
+    "pantone": "13-0317 TCX"
+  },
+  {
+    "name": "Light Yellow",
+    "hex": "#f3eaa1",
+    "pantone": "PMS 607 U"
+  },
+  {
+    "name": "White",
+    "hex": "#ffffff",
+    "pantone": "000C"
+  },
+  {
+    "name": "Caramel",
+    "hex": "#bf7651",
+    "pantone": "16-1439 TPX"
+  },
+  {
+    "name": "Chambray Blue",
+    "hex": "#9eb4d3",
+    "pantone": "15-4030 TCX"
+  },
+  {
+    "name": "Beige",
+    "hex": "#efdbb2",
+    "pantone": "PMS 7506 C"
+  },
+  {
+    "name": "Sun Orange",
+    "hex": "#f48037",
+    "pantone": "16 1257 TCX"
+  },
+  {
+    "name": "Khaki",
+    "hex": "#a39264",
+    "pantone": "16-0726 TCX"
+  },
+  {
+    "name": "Peach Pie",
+    "hex": "#ffa88b",
+    "pantone": "14-1325 TSX"
+  },
+  {
+    "name": "Black",
+    "hex": "#000000",
+    "pantone": ""
+  },
+  {
+    "name": "Sea Pink",
+    "hex": "#de98ab",
+    "pantone": "15-1912 TCX"
+  },
+  {
+    "name": "Deep Periwinkle",
+    "hex": "#7c83bc",
+    "pantone": "17-3932 TCX"
+  },
+  {
+    "name": "Pastel Pink",
+    "hex": "#f6dfe0",
+    "pantone": "9286 C"
+  },
+  {
+    "name": "Orange Beige",
+    "hex": "#eda769",
+    "pantone": ""
+  },
+  {
+    "name": "Red",
+    "hex": "#fa4616",
+    "pantone": "172 C"
+  }
+];
+      const snapshot = await getDocs(colorsCol);
+      const existingHexes = snapshot.docs.map(doc => doc.data().hex.toLowerCase());
+      for (const color of defaultColors) {
+        if (!existingHexes.includes(color.hex.toLowerCase())) {
+          await addDoc(colorsCol, color);
+        }
+      }
+      renderColors();
+    }
+
+    window.addEventListener("load", async () => {
+      await seedColorsFromJSON();
+    });
+
+</script>
 </body>
 </html>
